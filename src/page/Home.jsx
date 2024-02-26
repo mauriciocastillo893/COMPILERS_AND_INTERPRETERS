@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Monaco from "@monaco-editor/react"; 
 import '../style-sheets/Home.css'
+import { validateGrammar } from "./Analizador-sintatico";
+import { handleValidateChange } from './AnalizadorDeTokens'
 
 
 function Home() {
@@ -8,6 +10,7 @@ function Home() {
   const [result, setResult] = useState([]);
   const [isFound, setIsFound] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [validationGrammar, setValidationGrammar] = useState()
   const documentation = `
     DOCUMENTACIÓN
 
@@ -27,7 +30,7 @@ function Home() {
 
     Estructura de control (IF)
     if(condicion):
-      contenido
+      contenido;
     :
 
     Ciclo While
@@ -78,35 +81,8 @@ function Home() {
     :
   `
 
-  function handleValidateChange(codigo) {
-    setCurrentCode(codigo)
-    checkCode(codigo);
-  }
-
-  const checkCode = (codigo) => {
-    const lexer = new Lexer(codigo);
-    let tokens = [];
-    let error = null;
-
-    try {
-      let token = lexer.getNextToken();
-      while (token.type !== 'FINAL') {
-        tokens.push(token);
-        token = lexer.getNextToken();
-      }
-      setIsFound(true);
-    } catch (err) {
-      setIsFound(false);
-      error = `Error en la posición ${lexer.position}: ${err.message}`;
-    }
-
-    setResult(tokens.map((token) => `${token.type}: ${token.value}`));
-    setErrorMessage(error);
-  };
-
-
   return (
-    <>
+    <div className="container-main-nc">
       <div className="title">
         <h1><strong>NEXA COMPILERS</strong></h1>
       </div>
@@ -126,24 +102,20 @@ function Home() {
                 quickSuggestions: false,
               }}
               onChange={(newValue) => {
-                handleValidateChange(newValue), console.log("Valor:", newValue);
+                handleValidateChange(newValue, setCurrentCode, validateGrammar, setValidationGrammar, setIsFound, setResult, setErrorMessage), console.log("Valor:", newValue);
               }}
             />
-            <div className="line-validator">
-              {isFound !== null && currentCode.length!==0 && (
-                <p>
-                  {isFound ? 'Detección de caracteres válida' : 'Se detectó uno o más carácteres no reconocidos:'}
-                  <br></br>
-                  {isFound === false && errorMessage && (
-                    <span style={{ color: 'red' }}>
-                      {errorMessage.toUpperCase()}
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
+            
           </div>
           <br></br>
+          {validationGrammar &&(
+          <div>
+            <div >
+              {validationGrammar.message}
+            </div>
+          </div>
+        )}
+
 
           <div style={{}}>
             <strong>TOKEN Y LEXEMAS DETECTADOS:</strong>
@@ -160,53 +132,8 @@ function Home() {
         </div>
       </div>
 
-    </>
+    </div>
   );
 }
-
-
-
-class Lexer {
-  constructor(input) {
-    this.input = input;
-    this.position = 0;
-    this.tokenTable = [
-      { regex: /func|return|while|if|contenido|none/, type: 'PRESERVADAS' },
-      { regex: /:|;|"|'/, type: 'SIMBOLOS' },
-      { regex: /\(|\)/, type: 'PARENTESIS' },
-      { regex: /{|}/, type: 'LLAVES' },
-      { regex: /==|and|or|nor/, type: 'OPERADOR_LOGICO' },
-      { regex: /=/, type: 'OPERADOR_ASIGNACION' },
-      { regex: /int|string|char|bool|float/, type: 'TIPO' },
-      { regex: /true|false/, type: 'BOOLEANOS' },
-      { regex: /\b\d+\b(?![.])/, type: 'NUMERICOS' },
-      { regex:  /\b\d+(\.\d+)?\b/, type: 'DECIMALES' },
-      { regex: /[a-zA-Z0-9]+/, type: 'NOMBRE' },
-    ]
-  }
-
-  getNextToken() {
-    while (this.position < this.input.length) {
-      let char = this.input[this.position];
-      for (const tokenDef of this.tokenTable) {
-        const match = this.input.slice(this.position).match(tokenDef.regex);
-        if (match && match.index === 0) {
-          this.position += match[0].length;
-          return { type: tokenDef.type, value: match[0] };
-        }
-      }
-      if (/\s/.test(char)) {
-        this.position++;
-        continue;
-      }
-      throw new Error(`Caracter inesperado: ${char}`);
-    }
-    return { type: 'FINAL', value: null };
-  }
-}
-
-
-
-
 
 export default Home;
